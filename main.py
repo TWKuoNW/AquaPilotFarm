@@ -1,29 +1,28 @@
 import socket
-import temp_sensor_interface_V3_1 as sensor
 import threading
 import time
+
+from TempAndHumSensor import TempAndHumSensor
 from Listener import Listener
-from BTAutoBind import BTAutoBind
+from BTAutoBind import BTAutoBind 
 from video0 import app
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # 建立伺服器端的socket
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # 將socket定義為允許重複使用
-
 host = "0.0.0.0" # 監聽哪個ip
 port = 9999 # 串口位置
-
 server_socket.bind((host, port)) # 綁定到socket上
 server_socket.listen(5) # 讓socket進入伺服器模式，並且最大連接五個客戶
-
 
 def run_video0(): # 定義 video0
     app.run(host='0.0.0.0', port=8000, threaded=True) 
 
 try:
-    sr = sensor.SensorReader() # 啟動感測器讀取器
-    flask_thread = threading.Thread(target = run_video0) # 啟動video0串流
-    flask_thread.start() # 啟動執行續
-    bt_auto_bind = BTAutoBind()
+    video_0 = threading.Thread(target = run_video0) # 啟動video0串流
+    video_0.start() # 啟動執行續
+
+    temp_and_hum_sensor = TempAndHumSensor(device_path = "/dev/ttyUSB0")
+    bt_auto_bind = BTAutoBind() 
 
     while(True): # 不斷循環等待客戶連線
         
@@ -36,8 +35,9 @@ try:
 
         try:
             while(True):
-                air_temperature_and_humidity = "01 " + str(sr.read_value("TEMPERATURE")) + " " + str(sr.read_value("HUMIDITY")) + "\r\n"
+                air_temperature_and_humidity = "01 " + str(temp_and_hum_sensor.temperature) + " " + str(temp_and_hum_sensor.humidity) + "\r\n"
                 client_socket.send(air_temperature_and_humidity.encode('utf-8'))
+                #print(air_temperature_and_humidity)
                 time.sleep(1)
         except Exception as e:
             print(f"發送區 發生錯誤:{e}")

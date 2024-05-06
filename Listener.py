@@ -17,8 +17,11 @@ class Listener(threading.Thread):
     def stopped(self): # 這個function會回傳boolean型態，若有設置停止就會回傳True，反之為False
         return self._stop_event.is_set() # 檢查_stop_event標誌，如果設置了就返回True
         
-    def autoFeeder_control(self):
-        pass
+    def autoFeeder_control(self, action):
+        if(action == 'ps1'):
+            af.open()
+        elif(action == 'ps0'):
+            af.close()
     
     def probioticSprayer_control(self, action):
         if(action == 'ps1'):
@@ -35,15 +38,15 @@ class Listener(threading.Thread):
                     print("收到退出信號......")
                     self.stop()
                     print("退出執行續")
-                elif(data == "af1"):
-                    print(f"自動餵食器啟動...")
-                    af.open()
-                elif(data == "af0"):
-                    print(f"自動餵食器關閉...")
-                    af.close()
+                    
+                elif(data == "af1" or data == "af0"):
+                    AutoFeeder = threading.Thread(target=self.autoFeeder_control, args=(data,))
+                    AutoFeeder.start()
+
                 elif(data == "ps1" or data == "ps0"):
                     ProbioticSprayer = threading.Thread(target=self.probioticSprayer_control, args=(data,))
                     ProbioticSprayer.start()
+
                 elif(data == "video0_open"):
                     print(f"相機啟動...")
 

@@ -1,4 +1,5 @@
 import os
+import serial
 
 def list_serial_devices():
     devices = []
