@@ -1,5 +1,6 @@
 import bluetooth
 import subprocess
+import glob
 
 class BTAutoBind:
     def bind_rfcomm(channel, device_address): # 把藍牙綁訂到 rfcomm
@@ -10,8 +11,7 @@ class BTAutoBind:
             print(f"綁定失敗: {e}")
 
     print("搜尋附近藍牙裝置...")
-
-    nearby_devices = bluetooth.discover_devices(lookup_names=True, duration=5, flush_cache=True)
+    nearby_devices = bluetooth.discover_devices(lookup_names=True, duration=5, flush_cache=True) # 附近藍芽設備
     print(f"找到 {len(nearby_devices)} 個藍牙設備")
 
     for addr, name in nearby_devices:
@@ -20,3 +20,11 @@ class BTAutoBind:
         if(name == "AutoFeeder"):
             bind_rfcomm(1, addr)
         # print(f"  Address: {addr} - Name: {name}")
+
+if(__name__ == "__main__"):
+    BTAutoBind()
+
+    rfcomm_devices = glob.glob('/dev/rfcomm*')
+
+    for device in rfcomm_devices:
+        print("RFCOMM Device found:", device)
