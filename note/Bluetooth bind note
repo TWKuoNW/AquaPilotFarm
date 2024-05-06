@@ -1,0 +1,12 @@
+hcitool scan
+sudo rfcomm bind 0 <device_address> 1
+
+remove command
+sudo rfcomm release /dev/rfcomm0
+
+restart command
+sudo service bluetooth restart
+
+search command 
+rfcomm show
+ls /dev/rfcomm*
