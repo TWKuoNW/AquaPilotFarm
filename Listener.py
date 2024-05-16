@@ -18,9 +18,9 @@ class Listener(threading.Thread):
         return self._stop_event.is_set() # 檢查_stop_event標誌，如果設置了就返回True
         
     def autoFeeder_control(self, action):
-        if(action == 'ps1'):
+        if(action == 'af1'):
             af.open()
-        elif(action == 'ps0'):
+        elif(action == 'af0'):
             af.close()
     
     def probioticSprayer_control(self, action):
@@ -40,11 +40,12 @@ class Listener(threading.Thread):
                     print("退出執行續")
                     
                 elif(data == "af1" or data == "af0"):
+                    # print(data)
                     AutoFeeder = threading.Thread(target=self.autoFeeder_control, args=(data,))
                     AutoFeeder.start()
 
                 elif(data == "ps1" or data == "ps0"):
-                    ProbioticSprayer = threading.Thread(target=self.probioticSprayer_control, args=(data,))
+                    ProbioticSprayer = threading.Thread(target=self.probioticSprayer_control, daemon=True, args=(data,))
                     ProbioticSprayer.start()
 
                 elif(data == "video0_open"):

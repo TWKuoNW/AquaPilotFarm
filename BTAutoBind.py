@@ -22,9 +22,4 @@ class BTAutoBind:
         # print(f"  Address: {addr} - Name: {name}")
 
 if(__name__ == "__main__"):
-    BTAutoBind()
-
-    rfcomm_devices = glob.glob('/dev/rfcomm*')
-
-    for device in rfcomm_devices:
-        print("RFCOMM Device found:", device)
+    BTAutoBind()  

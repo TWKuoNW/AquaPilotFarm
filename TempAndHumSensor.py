@@ -41,11 +41,11 @@ class TempAndHumSensor:
 
             except Exception as error_infomation:
                 ser = ""
-                # print(error_infomation) 
+                print(error_infomation) 
                 time.sleep(1)
 
 if(__name__ == "__main__"):
-    sensor = TempAndHumSensor(device_path = "/dev/ttyUSB0")
+    sensor = TempAndHumSensor(device_path = '/dev/ttyUSB0')
     for i in range(10):
         print(sensor.temperature, sensor.humidity)
         time.sleep(1)
