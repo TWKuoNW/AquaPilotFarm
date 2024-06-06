@@ -6,7 +6,7 @@ app = Flask(__name__)
 
 class Camera:
     def __init__(self):
-        self.cap = cv2.VideoCapture(2 + cv2.CAP_V4L2)
+        self.cap = cv2.VideoCapture(0 + cv2.CAP_V4L2)
         self.lock = threading.Lock()
 
     def get_frame(self):

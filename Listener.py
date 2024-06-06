@@ -1,15 +1,15 @@
 import threading
-import ProbioticSprayer as ps
-import AutoFeeder as af
 import socket
 import time
 
 # 監聽器
 class Listener(threading.Thread):
-    def __init__(self, client_socket):  # 初始化Thread的設定
+    def __init__(self, client_socket, ps_obj, af_obj):  # 初始化Thread的設定
         super().__init__() # 調用父類別(Thread)的建構函式
         self.client_socket = client_socket # 獲取傳進來的socket
         self._stop_event = threading.Event() # 創建一個事件，用於執行續的同步
+        self.ps_obj = ps_obj
+        self.af_obj = af_obj
 
     def stop(self):
         self._stop_event.set() # 建立_stop_event標示為True，用於通知執行續的停止
@@ -19,15 +19,15 @@ class Listener(threading.Thread):
         
     def autoFeeder_control(self, action):
         if(action == 'af1'):
-            af.open()
+            self.af_obj.open()
         elif(action == 'af0'):
-            af.close()
+            self.af_obj.close()
     
     def probioticSprayer_control(self, action):
         if(action == 'ps1'):
-            ps.open()
+            self.ps_obj.open()
         elif(action == 'ps0'):
-            ps.close()
+            self.ps_obj.close()
             
     def run(self): # 執行續啟動後會啟動該function
         while(not self.stopped()): # 不斷循環直到檢查到_stop_event被設定
@@ -41,7 +41,7 @@ class Listener(threading.Thread):
                     
                 elif(data == "af1" or data == "af0"):
                     # print(data)
-                    AutoFeeder = threading.Thread(target=self.autoFeeder_control, args=(data,))
+                    AutoFeeder = threading.Thread(target=self.autoFeeder_control, daemon=True, args=(data,))
                     AutoFeeder.start()
 
                 elif(data == "ps1" or data == "ps0"):
