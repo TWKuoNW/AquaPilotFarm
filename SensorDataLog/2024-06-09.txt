@@ -1,0 +1,1 @@
+2024-06-09 01:43:46, AirTemperature: 33.2C, AirHumidity: 52.3%, WaterTemperature: 0.0C, WaterDO: 0.0mg/L 

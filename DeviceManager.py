@@ -62,6 +62,7 @@ class DeviceManager:
         self.Video1 = None
         self.probiotic_sprayer = None
         self.auto_feeder = None
+        
         self.video0_is_connect = False
         self.video1_is_connect = False
 
