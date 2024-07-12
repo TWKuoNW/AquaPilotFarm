@@ -19,6 +19,8 @@ try:
     ps_obj = dev_manager.get_probiotic_sprayer_instance()
     af_obj = dev_manager.get_auto_feeder_instance()
     
+    # print(air_temp_and_hum_obj, "\n", water_temp_and_DO_obj, "\n", ps_obj, "\n", af_obj)
+    
     if(air_temp_and_hum_obj != None and water_temp_and_DO_obj != None): # 如果溫濕度感測器和溶解氧、水溫感測器都存在
         SaveSensorData(air_temp_and_hum_obj, water_temp_and_DO_obj) # 啟動儲存感測器資料的執行續
 
@@ -43,7 +45,7 @@ try:
                     time.sleep(1)
                 
         except Exception as e:
-            print(f"發送區 發生錯誤:{e}")
+            # print(f"發送區 發生錯誤:{e}")
             print("關閉客戶端連線")
             
 except Exception as e:

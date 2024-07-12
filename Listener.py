@@ -42,14 +42,14 @@ class Listener(threading.Thread):
                     print("退出執行續")
                     
                 elif((data == "af1" or data == "af0") and self.af_obj != None): # 如果接收到的數據是af1或af0，並且自動餵食器物件存在
-                    # print(data)
-                    AutoFeeder = threading.Thread(target=self.autoFeeder_control, daemon=True, args=(data,)) # 創建一個執行續，用於控制自動餵食器
-                    AutoFeeder.start() 
+                    # 創建一個執行續，用於控制自動餵食器
+                    AutoFeeder_thread = threading.Thread(target=self.autoFeeder_control, daemon=True, args=(data,))
+                    AutoFeeder_thread.start() 
 
                 elif((data == "ps1" or data == "ps0") and self.ps_obj != None): # 如果接收到的數據是ps1或ps0，並且益生菌噴灑器物件存在
                     # 使用執行續控制益生菌噴灑器，防止阻塞
-                    ProbioticSprayer = threading.Thread(target=self.probioticSprayer_control, daemon=True, args=(data,)) 
-                    ProbioticSprayer.start()
+                    ProbioticSprayer_thread = threading.Thread(target=self.probioticSprayer_control, daemon=True, args=(data,)) 
+                    ProbioticSprayer_thread.start()
 
                 elif(data == "Air_Temperature" and self.air_temp_hum_obj != None): # 如果接收到的數據是Air_Temperature，並且溫濕度感測器物件存在
                     self.client_socket.send(str(self.air_temp_hum_obj.temperature).encode('utf-8'))

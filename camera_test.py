@@ -1,7 +1,7 @@
 import time
 import cv2
 
-cap = cv2.VideoCapture(2)
+cap = cv2.VideoCapture(1)
 
 while(cap.isOpened()):
    ret, frame = cap.read()

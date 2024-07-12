@@ -1,6 +1,9 @@
 hcitool scan
 sudo rfcomm bind 0 <device_address> 1
 
+sudo rfcomm bind 0 E4:65:B8:59:8B:E6 1
+sudo rfcomm bind 1 E8:6B:EA:C9:9B:C2 1
+
 remove command
 sudo rfcomm release /dev/rfcomm0
 

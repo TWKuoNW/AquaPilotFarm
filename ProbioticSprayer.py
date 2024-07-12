@@ -8,8 +8,14 @@ class ProbioticSprayer:
     def open(self):
         self.ser.write("open".encode())
         print("ProbioticSprayer.py::open()")
-        
-                    
+                         
     def close(self):
         self.ser.write("close".encode())
         print("ProbioticSprayer.py::close()")
+        
+if(__name__ == "__main__"):
+    import time
+    ps = ProbioticSprayer()
+    ps.open()
+    time.sleep(3)
+    ps.close()

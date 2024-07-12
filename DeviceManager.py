@@ -1,17 +1,104 @@
 import os
 import glob
 import subprocess
-import bluetooth
 import threading
+import time
+import cv2
 
 from TempAndHumSensor import TempAndHumSensor
 from WaterTempAndDOSensor import WaterTempAndDOSensor
 from ProbioticSprayer import ProbioticSprayer
 from AutoFeeder import AutoFeeder
-from video0 import app as app0
-from video1 import app as app1
+from video0 import VideoStream as Camera0
+from video1 import VideoStream as Camera1
+from video2 import VideoStream as Camera2
 
 class DeviceManager:
+    def __init__(self):
+        self.temp_and_hum_sensor = None
+        self.water_temperature_and_DO_sensor = None
+        self.probiotic_sprayer = None
+        self.auto_feeder = None
+
+        self.video0_is_connect = False
+        self.video1_is_connect = False
+        self.video2_is_connect = False
+        
+        print("設備管理器運作中，請稍後.....")
+
+        print("搜尋裝置...")
+        
+        print("\t搜尋連接上樹梅派的USB與ACM裝置...")
+        USB_list = self.check_devices('/dev/ttyUSB*')
+        ACM_list = self.check_devices('/dev/ttyACM*')
+
+        print("\t搜尋連接上藍牙裝置...")
+        self.release_rfcomm_connections() # 釋放所有 rfcomm 連接
+        bluetooth_devices_list = self.get_paired_bluetooth_devices()
+
+        print("\t搜尋連接上樹梅派的相機...")
+        camera_list = []
+        for camera_idx in range(10):
+            cap = cv2.VideoCapture(camera_idx)
+            if(cap.isOpened()):
+                camera_list.append(camera_idx)
+                cap.release()
+        
+        print(f"\t找到USB: {USB_list}")
+        print(f"\t找到ACM: {ACM_list}")
+        print(f"\t找到藍牙裝置: {bluetooth_devices_list}")
+        print(f"\t找到相機: {camera_list}")
+
+        print("識別與綁定裝置...")
+        
+        for USB in USB_list:
+            idVender, idProduct = self.get_device_info(USB)
+            if(idVender == '1a86' and idProduct == '7523'):
+                print(f"\t識別到溫濕度感測器...")
+                self.temp_and_hum_sensor = TempAndHumSensor(device_path = USB)
+                print("\t啟動 TempAndHumSensor.py")
+
+        for ACM in ACM_list:
+            idVender, idProduct = self.get_device_info(ACM)
+            if(idVender == '2341' and idProduct == '0043'):
+                print("\t識別到溶解氧、水溫感測器...")
+                self.water_temperature_and_DO_sensor = WaterTempAndDOSensor(device_path = ACM)
+                print("\t啟動 WaterTempAndDOSensor.py")
+
+        for device in bluetooth_devices_list:
+            addr, name = device['address'], device['name']
+            if(name == "ProbioticSprayer"):
+                print("\t識別到益生菌噴灑器...")
+                self.bind_rfcomm(0, addr)
+                print("\t益生菌噴灑器綁定完成")
+                time.sleep(1)
+                self.probiotic_sprayer = ProbioticSprayer()
+                print("\t啟動 ProbioticSprayer.py")
+            if(name == "AutoFeeder"):
+                print("\t識別到自動餵食器...")
+                self.bind_rfcomm(1, addr)
+                print("\t自動餵食器綁定完成")
+                time.sleep(1)
+                self.auto_feeder = AutoFeeder()
+                print("\t啟動 AutoFeeder.py")
+        
+        for video in camera_list:
+            if(self.video0_is_connect == False):
+                print("\t識別到第一支相機...")
+                self.video0_is_connect = True
+                threading.Thread(target=self.run_camera0, args=(video,)).start()
+                print("\t第一支相機已啟動")
+            elif(self.video1_is_connect == False):
+                print("\t識別到第二支相機...")
+                self.video1_is_connect = True
+                threading.Thread(target=self.run_camera1, args=(video,)).start()
+                print("\t第二支相機已啟動")
+            elif(self.video2_is_connect == False):
+                print("\t識別到第三支相機...")
+                self.video2_is_connect = True
+                threading.Thread(target=self.run_camera2, args=(video,)).start()
+                print("\t第三支相機已啟動")
+
     def check_devices(self, dev): # 尋找 device
         devices = glob.glob(dev)
         device_list = []
@@ -23,7 +110,7 @@ class DeviceManager:
 
     def get_device_info(self, device_path): # 取得 idVender 和 idProduct 
         try:
-            result = subprocess.run(['udevadm', 'info', '-q', 'all', '-n', device_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            result = subprocess.run(['sudo', 'udevadm', 'info', '-q', 'all', '-n', device_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             
             if result.returncode != 0:
                 print(f"Error running udevadm: {result.stderr}")
@@ -42,81 +129,54 @@ class DeviceManager:
             print(f"Exception occurred: {e}")
             return None, None
     
-    def bind_rfcomm(self, channel, device_address): # 把藍牙綁訂到 rfcomm
+    def release_rfcomm_connections(self): # 釋放所有 rfcomm 連接
+        result = subprocess.run(['rfcomm'], stdout=subprocess.PIPE)
+        output = result.stdout.decode('utf-8')
+        connections = []
+
+        for line in output.split('\n'):
+            if line.startswith('rfcomm'):
+                parts = line.split()
+                device = parts[0]
+                connections.append(device)
+        
+        for device in connections:
+            # print(f"Releasing {device}")
+            subprocess.run(['sudo', 'rfcomm', 'release', device])
+
+    def get_paired_bluetooth_devices(self): # 取得已配對的藍牙裝置
+        # 進入 bluetoothctl 並執行指令
+        process = subprocess.Popen(['bluetoothctl'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate(input=b'devices\nexit\n')
+        
+        devices = []
+        for line in stdout.decode('utf-8').split('\n'):
+            if 'Device' in line:
+                parts = line.split(' ')
+                device_address = parts[1]
+                device_name = ' '.join(parts[2:])
+                devices.append({'address': device_address, 'name': device_name})
+        
+        return devices
+
+    def bind_rfcomm(self, channel, device_address): # 把藍牙綁訂到 rfcomm            
         try:
             subprocess.check_call(['sudo', 'rfcomm', 'bind', str(channel), device_address, '1'])
-            print(f"綁定 {device_address} 到 RFCOMM channel {channel}")
+            # print(f"綁定 {device_address} 到 RFCOMM channel {channel}")
         except subprocess.CalledProcessError as e:
             print(f"綁定失敗: {e}")
-
-    def run_video0(self): # 定義 video0
-        app0.run(host='0.0.0.0', port=8000, threaded=True) 
-
-    def run_video1(self): # 定義 video1
-        app1.run(host='0.0.0.0', port=8001, threaded=True) 
-
-    def __init__(self):
-        self.temp_and_hum_sensor = None
-        self.water_temperature_and_DO_sensor = None
-        self.video0 = None
-        self.Video1 = None
-        self.probiotic_sprayer = None
-        self.auto_feeder = None
-        
-        self.video0_is_connect = False
-        self.video1_is_connect = False
-
-        print("設備管理器運作中，請稍後.....")
-
-        print("搜尋附近藍牙裝置...")
-
-        nearby_devices = bluetooth.discover_devices(lookup_names=True, duration=5, flush_cache=True) # 附近藍芽設備
-        
-        print(f"找到 {len(nearby_devices)} 個藍牙設備")
-
-        print("搜尋連接上樹梅派的USB與ACM裝置...")
-
-        USB_list = self.check_devices('/dev/ttyUSB*')
-        ACM_list = self.check_devices('/dev/ttyACM*')
-        Video_list = self.check_devices('/dev/video*')
-
-        for USB in USB_list:
-            idVender, idProduct = self.get_device_info(USB)
-            if(idVender == '1a86' and idProduct == '7523'):
-                self.temp_and_hum_sensor = TempAndHumSensor(device_path = USB)
-                print("啟動 TempAndHumSensor.py")
-
-        for ACM in ACM_list:
-            idVender, idProduct = self.get_device_info(ACM)
-            if(idVender == '2341' and idProduct == '0043'):
-                self.water_temperature_and_DO_sensor = WaterTempAndDOSensor(device_path = ACM)
-                print("啟動 WaterTempAndDOSensor.py")
-
-        for addr, name in nearby_devices:
-            if(name == "ProbioticSprayer"):
-                self.bind_rfcomm(0, addr)
-                print("益生菌噴灑器綁定完成")
-                self.probiotic_sprayer = ProbioticSprayer()
-                print("啟動 ProbioticSprayer.py")
-
-            if(name == "AutoFeeder"):
-                self.bind_rfcomm(1, addr)
-                print("自動餵食器綁定完成")
-                self.auto_feeder = AutoFeeder()
-                print("啟動 AutoFeeder.py")
     
-        for video in Video_list:
-            idVender, idProduct = self.get_device_info(video)
-            if(idVender == '0c45' and idProduct == '636f' and self.video0_is_connect == False):
-                print("open Video0")
-                video_0 = threading.Thread(target = self.run_video0) # 啟動video0串流
-                video_0.start() # 啟動執行續
-                self.video0_is_connect = True
-            elif(idVender == '13d3' and idProduct == '784b' and self.video1_is_connect == False):
-                print("open Video1")
-                video_1 = threading.Thread(target = self.run_video1) # 啟動video0串流
-                video_1.start() # 啟動執行續
-                self.video1_is_connect = True     
+    def run_camera0(self, video): # 啟動相機0
+        video_stream = Camera0(video)
+        video_stream.run()
+
+    def run_camera1(self, video): # 啟動相機1
+        video_stream = Camera1(video)
+        video_stream.run()
+
+    def run_camera2(self, video): # 啟動相機2
+        video_stream = Camera2(video)
+        video_stream.run()
 
     def get_temp_and_hum_sensor_instance(self): # 取得溫濕度感測器物件
         return self.temp_and_hum_sensor
@@ -137,6 +197,8 @@ if(__name__ == "__main__"):
     water_temp_and_DO_obj = dev_manager.get_water_temp_and_DO_sensor_instance()
     ps_obj = dev_manager.get_probiotic_sprayer_instance()
     af_obj = dev_manager.get_auto_feeder_instance()
+    
+    print(ps_obj, " ", af_obj)
 
     if(ps_obj != None):
         ps_obj.open()

@@ -21,9 +21,9 @@ class VideoStream():
     def video(self):
         return Response(self.generate_frames(self.camera), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-    def run(self, host='0.0.0.0', port=8001, threaded=True):
+    def run(self, host='0.0.0.0', port=8002, threaded=True):
         self.app.run(host=host, port=port, threaded=threaded)
 
 if __name__ == '__main__':
-    video_stream = VideoStream(3)
+    video_stream = VideoStream(1)
     video_stream.run()
