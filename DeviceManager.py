@@ -12,6 +12,7 @@ from AutoFeeder import AutoFeeder
 from video0 import VideoStream as Camera0
 from video1 import VideoStream as Camera1
 from video2 import VideoStream as Camera2
+from camera_control import CameraControl
 
 class DeviceManager:
     def __init__(self):
@@ -19,6 +20,7 @@ class DeviceManager:
         self.water_temperature_and_DO_sensor = None
         self.probiotic_sprayer = None
         self.auto_feeder = None
+        self.camera_control = None
 
         self.video0_is_connect = False
         self.video1_is_connect = False
@@ -52,14 +54,19 @@ class DeviceManager:
         print("識別與綁定裝置...")
         
         for USB in USB_list:
-            idVender, idProduct = self.get_device_info(USB)
-            if(idVender == '1a86' and idProduct == '7523'):
+            idVender, idProduct, serial = self.get_device_info(USB)
+            if(idVender == '1a86' and idProduct == '7523' and serial == '0000'):
                 print(f"\t識別到溫濕度感測器...")
                 self.temp_and_hum_sensor = TempAndHumSensor(device_path = USB)
                 print("\t啟動 TempAndHumSensor.py")
+            elif(idVender == '1a86' and idProduct == '7523' and serial == '1a86_USB_Serial'):
+                print(f"idVender: {idVender}, idProduct: {idProduct}, serial: {serial}")
+                print("\t識別到相機控制器...")
+                self.camera_control = CameraControl(device_path = USB)
+                print("\t啟動 CameraControl.py")
 
         for ACM in ACM_list:
-            idVender, idProduct = self.get_device_info(ACM)
+            idVender, idProduct, _ = self.get_device_info(ACM)
             if(idVender == '2341' and idProduct == '0043'):
                 print("\t識別到溶解氧、水溫感測器...")
                 self.water_temperature_and_DO_sensor = WaterTempAndDOSensor(device_path = ACM)
@@ -116,14 +123,16 @@ class DeviceManager:
                 print(f"Error running udevadm: {result.stderr}")
                 return None, None
 
-            vendor_id, product_id = None, None
+            vendor_id, product_id, serial = None, None, None
             for line in result.stdout.splitlines():
                 if 'ID_VENDOR_ID' in line:
                     vendor_id = line.split('=')[1].strip()
                 elif 'ID_MODEL_ID' in line:
                     product_id = line.split('=')[1].strip()
+                elif 'ID_SERIAL' in line:
+                    serial = line.split('=')[1].strip()
             
-            return vendor_id, product_id
+            return vendor_id, product_id, serial
 
         except Exception as e:
             print(f"Exception occurred: {e}")
@@ -189,7 +198,9 @@ class DeviceManager:
     
     def get_auto_feeder_instance(self): # 取得自動餵食器物件
         return self.auto_feeder
-    
+
+    def get_camera_control_instance(self): # 取得相機控制物件
+        return self.camera_control   
 if(__name__ == "__main__"):
     import time
     dev_manager = DeviceManager()

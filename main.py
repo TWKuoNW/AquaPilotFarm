@@ -3,6 +3,7 @@ import time
 
 from DeviceManager import DeviceManager
 from Listener import Listener
+# from ConnectorTest import Connector
 from SaveSensorData import SaveSensorData
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # 建立伺服器端的socket
@@ -18,7 +19,8 @@ try:
     water_temp_and_DO_obj = dev_manager.get_water_temp_and_DO_sensor_instance()
     ps_obj = dev_manager.get_probiotic_sprayer_instance()
     af_obj = dev_manager.get_auto_feeder_instance()
-    
+    camera_control_obj = dev_manager.get_camera_control_instance()
+
     # print(air_temp_and_hum_obj, "\n", water_temp_and_DO_obj, "\n", ps_obj, "\n", af_obj)
     
     if(air_temp_and_hum_obj != None and water_temp_and_DO_obj != None): # 如果溫濕度感測器和溶解氧、水溫感測器都存在
@@ -28,9 +30,9 @@ try:
         print("等待客戶端連線...")
         client_socket, client_address = server_socket.accept() # 等待客戶端連線(accept方法會阻塞，直到連線成功才往下執行)
         print(f"連線地址: {str(client_address)}")
-
-        listener = Listener(client_socket, ps_obj, af_obj, air_temp_and_hum_obj, water_temp_and_DO_obj) # 啟動監聽器
+        listener = Listener(client_socket, ps_obj, af_obj, air_temp_and_hum_obj, water_temp_and_DO_obj, camera_control_obj) # 啟動監聽器
         listener.start() # 啟動執行續
+        #connector = Connector(client_socket)
 
         try:
             while(True):

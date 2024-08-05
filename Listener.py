@@ -4,7 +4,7 @@ import time
 
 # 監聽器
 class Listener(threading.Thread):
-    def __init__(self, client_socket, ps_obj, af_obj, air_temp_and_hum_obj, water_temp_and_DO_obj):  # 初始化Thread的設定
+    def __init__(self, client_socket, ps_obj, af_obj, air_temp_and_hum_obj, water_temp_and_DO_obj, camera_control):  # 初始化Thread的設定
         super().__init__() # 調用父類別(Thread)的建構函式
         self.client_socket = client_socket # 獲取傳進來的socket
         self._stop_event = threading.Event() # 創建一個事件，用於執行續的同步
@@ -12,6 +12,8 @@ class Listener(threading.Thread):
         self.af_obj = af_obj # 獲取傳進來的 自動餵食器 物件
         self.air_temp_hum_obj = air_temp_and_hum_obj # 獲取傳進來的 溫濕度感測器 物件
         self.water_temp_and_DO_obj = water_temp_and_DO_obj # 獲取傳進來的 溶解氧、水溫感測器 物件
+        self.camera_control = camera_control #-------------------新增-------------------
+
 
     def stop(self):
         self._stop_event.set() # 建立_stop_event標示為True，用於通知執行續的停止
@@ -30,11 +32,20 @@ class Listener(threading.Thread):
             self.ps_obj.open()
         elif(action == 'ps0'):
             self.ps_obj.close()
+
+    def camera_control_fun(self, action): # 自動餵食器控制
+        if(action == 'TurnRight'):
+            self.camera_control.turn_right()
+            # print("往右轉")
+        elif(action == 'TurnLeft'):
+            self.camera_control.turn_left()
+            # print("往左轉")
             
     def run(self): # 執行續啟動後會啟動該function
         while(not self.stopped()): # 不斷循環直到檢查到_stop_event被設定
             try:
                 data = self.client_socket.recv(1024).decode("utf-8") # 從socket接收數據
+                print(f"收到:{data}")
                 
                 if(data == "EXIT"):
                     print("收到退出信號......")
@@ -66,9 +77,10 @@ class Listener(threading.Thread):
                 elif(data == "Water_DO" and self.water_temp_and_DO_obj != None): # 如果接收到的數據是Water_DO，並且溶解氧、水溫感測器物件存在
                     self.client_socket.send(str(self.water_temp_and_DO_obj.DO).encode('utf-8'))
                     print(str(self.water_temp_and_DO_obj.DO))  
-                    
-                elif(data != ""):
-                    print(f"收到PC訊息: {data}") 
+                
+                elif((data == "TurnRight" or data == "TurnLeft") and self.camera_control != None): 
+                    CameraControl_thread = threading.Thread(target=self.camera_control_fun, daemon=True, args=(data,))
+                    CameraControl_thread.start()
 
             except socket.error as e:
                 self.stop() # 若發生錯誤，列印錯誤訊息並停止執行續
