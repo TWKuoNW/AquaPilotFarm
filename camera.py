@@ -12,7 +12,7 @@ class Camera:
             if not success:
                 return None
             else:
-                frame = cv2.resize(frame, (640, 480), interpolation=cv2.INTER_LINEAR)
+                frame = cv2.resize(frame, (1920, 1080), interpolation=cv2.INTER_LINEAR)
                 ret, buffer = cv2.imencode('.jpg', frame)
                 frame = buffer.tobytes()
                 return frame

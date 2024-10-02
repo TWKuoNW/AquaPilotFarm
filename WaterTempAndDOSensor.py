@@ -6,8 +6,8 @@ class WaterTempAndDOSensor:
     def __init__(self, device_path = ""):
         self.device_path = device_path
         self.command = "ALL"
-        self.water_temperature = 0.0
-        self.DO = 0.0
+        self.water_temperature = 24.0
+        self.DO = 8.3
         
         start = threading.Thread(target = self.Reader)
         start.daemon = True
@@ -28,7 +28,8 @@ class WaterTempAndDOSensor:
                 data = self.send(ser, "ALL")
                 if(len(data) > 1):
                     self.water_temperature = data[0]
-                    self.DO = int(data[1]) / 100
+                    self.DO = int(data[1]) / 1000
+                    # print(f"WaterTemp:{self.water_temperature}, DO:{self.DO }")
                 time.sleep(1)
 
             except Exception as error_infomation:

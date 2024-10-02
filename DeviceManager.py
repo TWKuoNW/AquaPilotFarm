@@ -26,6 +26,7 @@ class DeviceManager:
         self.video1_is_connect = False
         self.video2_is_connect = False
         
+        self.camera_list = []
         print("設備管理器運作中，請稍後.....")
 
         print("搜尋裝置...")
@@ -39,38 +40,46 @@ class DeviceManager:
         bluetooth_devices_list = self.get_paired_bluetooth_devices()
 
         print("\t搜尋連接上樹梅派的相機...")
-        camera_list = []
-        for camera_idx in range(10):
+        for camera_idx in range(5):
             cap = cv2.VideoCapture(camera_idx)
             if(cap.isOpened()):
-                camera_list.append(camera_idx)
+                self.camera_list.append(camera_idx)
                 cap.release()
         
         print(f"\t找到USB: {USB_list}")
         print(f"\t找到ACM: {ACM_list}")
         print(f"\t找到藍牙裝置: {bluetooth_devices_list}")
-        print(f"\t找到相機: {camera_list}")
+        print(f"\t找到相機: {self.camera_list}")
 
         print("識別與綁定裝置...")
         
         for USB in USB_list:
             idVender, idProduct, serial = self.get_device_info(USB)
+            print(f"USB:{USB}, idVender: {idVender}, idProduct: {idProduct}, serial: {serial}")
             if(idVender == '1a86' and idProduct == '7523' and serial == '0000'):
                 print(f"\t識別到溫濕度感測器...")
                 self.temp_and_hum_sensor = TempAndHumSensor(device_path = USB)
                 print("\t啟動 TempAndHumSensor.py")
             elif(idVender == '1a86' and idProduct == '7523' and serial == '1a86_USB_Serial'):
-                print(f"idVender: {idVender}, idProduct: {idProduct}, serial: {serial}")
                 print("\t識別到相機控制器...")
                 self.camera_control = CameraControl(device_path = USB)
                 print("\t啟動 CameraControl.py")
+            """
+            elif(idVender == '0403' and idProduct == '6001' and serial == 'A9G3VPLP'):
+                print("\t識別到溶解氧、水溫感測器...")
+                self.water_temperature_and_DO_sensor = WaterTempAndDOSensor(device_path = USB)
+                print("\t啟動 WaterTempAndDOSensor.py")
+            """
 
         for ACM in ACM_list:
-            idVender, idProduct, _ = self.get_device_info(ACM)
-            if(idVender == '2341' and idProduct == '0043'):
+            idVender, idProduct, serial = self.get_device_info(ACM)
+            # print(f"ACM: idVendor:{idVender}, idProduct:{idProduct}, Serial:{serial}")
+            
+            if(idVender == '2341' and idProduct == '0069' and serial == '33171E0937323835AACF33324B572D45'):
                 print("\t識別到溶解氧、水溫感測器...")
                 self.water_temperature_and_DO_sensor = WaterTempAndDOSensor(device_path = ACM)
                 print("\t啟動 WaterTempAndDOSensor.py")
+            
 
         for device in bluetooth_devices_list:
             addr, name = device['address'], device['name']
@@ -89,7 +98,7 @@ class DeviceManager:
                 self.auto_feeder = AutoFeeder()
                 print("\t啟動 AutoFeeder.py")
         
-        for video in camera_list:
+        for video in self.camera_list:
             if(self.video0_is_connect == False):
                 print("\t識別到第一支相機...")
                 self.video0_is_connect = True
